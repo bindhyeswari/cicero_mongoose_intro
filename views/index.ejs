@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html ng-app="myapp">
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+    <script src="/angular/angular.js"></script>
+    <script src="/angular-resource/angular-resource.js"></script>
+    <script>
+      angular.module('myapp', ['ngResource']).controller('ContactController', function (Contact) {
+
+        var cs = this;
+        cs.newcontact = new Contact();
+
+        Contact.query(function(data) {
+          cs.contacts = data;
+        });
+
+        cs.create = function () {
+            cs.message = '';
+            cs.error = false;
+            cs.newcontact.$save(function (data) {
+              cs.contacts.push(data);
+              cs.newcontact = new Contact();
+              cs.message = 'Contact has been added!'
+            }, function (error) {
+              cs.error = true;
+              cs.message = 'Something broke! Was not able to create the contact!';
+            });
+        };
+
+        cs.edit = function (contact, event) {
+          contact.edited = true;
+          var firstinputchild = event.target.parentNode.firstElementChild;
+          setTimeout(function() {
+            firstinputchild.focus();
+          }, 0);
+        }
+
+        cs.update = function(contact) {
+          Contact.update(contact, function(data) {
+            contact.edited = false;
+          });
+        }
+
+        cs.remove = function(contact) {
+          Contact.remove({id: contact._id}, function (data) {
+            cs.contacts.splice(cs.contacts.indexOf(contact), 1);
+          }, function (error) {
+            console.log('There was an error contacting the server');
+          });
+        };
+
+      }).factory('Contact', function ($resource) {
+        return $resource('/contacts/:id', {id: '@_id'}, {
+          update: {
+            method: 'PUT'
+          }
+        });
+      });
+    </script>
+  </head>
+  <body ng-controller="ContactController as cs">
+    <h1>CRUD Application - AngularJS</h1>
+    <section class="panel">
+      <h1>All Contacts</h1>
+      <ul>
+        <li ng-repeat="contact in cs.contacts" ng-class="{ static: !contact.edited }">
+          <input ng-disabled="!contact.edited" type="text" ng-model="contact.name"/>
+          <input ng-disabled="!contact.edited" type="text" ng-model="contact.email"/>
+          <input ng-disabled="!contact.edited" type="text" ng-model="contact.location"/>
+          <button ng-click="cs.edit(contact, $event)">Edit</button>
+          <button ng-click="cs.update(contact)">Update</button>
+          <button ng-click="cs.remove(contact)">Remove</button>
+        </li>
+      </ul>
+    </section>
+    <section class="panel">
+      <h1>Create a contact</h1>
+      <input type="text" ng-model="cs.newcontact.name" placeholder="name"/>
+      <input type="text" ng-model="cs.newcontact.email" placeholder="email"/>
+      <input type="text" ng-model="cs.newcontact.location" placeholder="location"/>
+      <button ng-click="cs.create()">Create Contact</button>
+      <div class="message" ng-class="{ error: cs.error }">{{cs.message}}</div>
+    </section>
+
+  </body>
+</html>
